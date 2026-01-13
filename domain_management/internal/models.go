@@ -23,6 +23,7 @@ var FilterAttributes = map[string]attr.Type{
 type DomainFilterDataSourceModel struct {
 	DomainLabels      *Filters               `tfsdk:"domain_labels" json:"domain_labels"`
 	DomainAnnotations *Filters               `tfsdk:"domain_annotations" json:"domain_annotations"`
+	JqFilter          *string                `tfsdk:"jq_filter" json:"jq_filter"`
 	Domains           basetypes.DynamicValue `tfsdk:"domains" json:"domains"`
 }
 
@@ -65,6 +66,7 @@ func (d *DomainFilterDataSourceModel) Payload() (api.DomainReq, error) {
 			}
 		}
 	}
+
 	request := api.DomainReq{
 		FilterDomains: &api.IncludeExclude{
 			Include: &api.Include{
@@ -80,6 +82,7 @@ func (d *DomainFilterDataSourceModel) Payload() (api.DomainReq, error) {
 				},
 			},
 		},
+		JqFilter: d.JqFilter,
 	}
 
 	return request, nil
@@ -90,7 +93,16 @@ type FullDomainFilterDataSourceModel struct {
 	DomainAnnotations    *Filters               `tfsdk:"domain_annotations" json:"domain_annotations"`
 	SubdomainLabels      *Filters               `tfsdk:"subdomain_labels" json:"subdomain_labels"`
 	SubdomainAnnotations *Filters               `tfsdk:"subdomain_annotations" json:"subdomain_annotations"`
+	JqFilter             *string                `tfsdk:"jq_filter" json:"jq_filter"`
 	Domains              basetypes.DynamicValue `tfsdk:"domains" json:"domains"`
+}
+
+type SubdomainFilterDataSourceModel struct {
+	DomainLabels      *Filters               `tfsdk:"domain_labels" json:"domain_labels"`
+	DomainAnnotations *Filters               `tfsdk:"domain_annotations" json:"domain_annotations"`
+	SubdomainLabels   *Filters               `tfsdk:"subdomain_labels" json:"subdomains_labels"`
+	JqFilter          *string                `tfsdk:"jq_filter" json:"jq_filter"`
+	Domains           basetypes.DynamicValue `tfsdk:"domains" json:"domains"`
 }
 
 // Returns a result that is suitable for use in api requests.
@@ -149,6 +161,7 @@ func (d *FullDomainFilterDataSourceModel) Payload() (api.DomainReq, error) {
 				},
 			},
 		},
+		JqFilter: d.JqFilter,
 	}
 
 	if d.SubdomainLabels != nil {

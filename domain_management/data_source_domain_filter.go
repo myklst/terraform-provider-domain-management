@@ -62,6 +62,15 @@ func (d *domainFilterDataSource) Schema(ctx context.Context, req datasource.Sche
 				Required:       false,
 				Optional:       true,
 			},
+			"jq_filter": schema.StringAttribute{
+				Description: strings.Join([]string{
+					"A string in the format of jq syntax.",
+					"Can be used to perform more advanced filtration than the standard include/exclude.",
+					"Beware, depending on your input, it may reshape the output such that it no longer matches the Domain Manangement schema.",
+				}, "\n"),
+				Required: false,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -109,8 +118,6 @@ func (d *domainFilterDataSource) Read(ctx context.Context, req datasource.ReadRe
 
 	// Early return if no domains are found.
 	if len(domains) == 0 {
-		resp.Diagnostics.AddWarning("No domains found.", "Double check your data source input.")
-
 		// Set the state to an empty list if no domains are found
 		emptyList := json.RawMessage([]byte("[]"))
 		state.Domains, err = utils.JSONToTerraformDynamicValue(emptyList)
@@ -120,6 +127,17 @@ func (d *domainFilterDataSource) Read(ctx context.Context, req datasource.ReadRe
 		}
 		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 		return
+	}
+
+	// JQ Filter can return an array of nil domains
+	// Check for this situation and return an error if needed.
+	for _, domain := range domains {
+		if domain == nil {
+			resp.Diagnostics.AddError("API returned nil domain.",
+				"Double check your jq filter or data source input.",
+			)
+			return
+		}
 	}
 
 	bytes, err := json.Marshal(domains)

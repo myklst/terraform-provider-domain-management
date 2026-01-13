@@ -8,6 +8,7 @@ import (
 type DomainReq struct {
 	FilterDomains    *IncludeExclude `json:"domains,omitempty"`
 	FilterSubdomains *IncludeExclude `json:"subdomains,omitempty"`
+	JqFilter         *string         `json:"-"`
 }
 
 func (request *DomainReq) ToURLQuery() (url.Values, error) {
@@ -24,6 +25,10 @@ func (request *DomainReq) ToURLQuery() (url.Values, error) {
 
 	if len(filter) > 0 {
 		v.Set("filter", string(filter))
+	}
+
+	if request.JqFilter != nil && len(*request.JqFilter) > 0 {
+		v.Set("jq_filter", *request.JqFilter)
 	}
 
 	return v, nil

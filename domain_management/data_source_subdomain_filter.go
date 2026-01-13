@@ -13,15 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
-
-type subdomainFilterDataSourceModel struct {
-	DomainLabels      *internal.Filters      `tfsdk:"domain_labels" json:"domain_labels"`
-	DomainAnnotations *internal.Filters      `tfsdk:"domain_annotations" json:"domain_annotations"`
-	SubdomainLabels   *internal.Filters      `tfsdk:"subdomain_labels" json:"subdomains_labels"`
-	Domains           basetypes.DynamicValue `tfsdk:"domains" json:"domains"`
-}
 
 func NewSubdomainDataSource() datasource.DataSource {
 	return &subdomainFilterDataSource{}
@@ -81,6 +73,15 @@ func (d *subdomainFilterDataSource) Schema(ctx context.Context, req datasource.S
 				Required:       false,
 				Optional:       true,
 			},
+			"jq_filter": schema.StringAttribute{
+				Description: strings.Join([]string{
+					"A string in the format of jq syntax.",
+					"Can be used to perform more advanced filtration than the standard include/exclude.",
+					"Beware, depending on your input, it may reshape the output such that it no longer matches the Domain Manangement schema.",
+				}, "\n"),
+				Required: false,
+				Optional: true,
+			},
 		},
 	}
 }
@@ -106,7 +107,7 @@ func (d *subdomainFilterDataSource) Configure(ctx context.Context, req datasourc
 }
 
 func (d *subdomainFilterDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state subdomainFilterDataSourceModel
+	var state internal.SubdomainFilterDataSourceModel
 
 	diags := req.Config.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -118,6 +119,7 @@ func (d *subdomainFilterDataSource) Read(ctx context.Context, req datasource.Rea
 		DomainLabels:      state.DomainLabels,
 		DomainAnnotations: state.DomainAnnotations,
 		SubdomainLabels:   state.SubdomainLabels,
+		JqFilter:          state.JqFilter,
 	}
 
 	payload, err := domainRequest.Payload()
@@ -134,8 +136,6 @@ func (d *subdomainFilterDataSource) Read(ctx context.Context, req datasource.Rea
 
 	// Early return if no domains are found.
 	if len(domainsFull) == 0 {
-		resp.Diagnostics.AddWarning("No domains found.", "Double check your data source input.")
-
 		// Set the state to an empty list if no domains are found
 		emptyList := json.RawMessage([]byte("[]"))
 		state.Domains, err = utils.JSONToTerraformDynamicValue(emptyList)
@@ -145,6 +145,17 @@ func (d *subdomainFilterDataSource) Read(ctx context.Context, req datasource.Rea
 		}
 		resp.Diagnostics.Append(resp.State.Set(ctx, state)...)
 		return
+	}
+
+	// JQ Filter can return an array of nil domains
+	// Check for this situation and return an error if needed.
+	for _, domain := range domainsFull {
+		if domain == nil {
+			resp.Diagnostics.AddError("API returned nil domain.",
+				"Double check your jq filter or data source input.",
+			)
+			return
+		}
 	}
 
 	domainsFull, diags = processDomainFull(domainsFull)

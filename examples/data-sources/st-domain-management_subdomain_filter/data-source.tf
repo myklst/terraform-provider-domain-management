@@ -16,4 +16,6 @@ data "st-domain-management_subdomain_filter" "example" {
     exclude = { # Don't exclude any labels
     }
   }
+
+  jq_filter = ".dt = [.dt[0]]" # Use jq to select the first element of the array
 }

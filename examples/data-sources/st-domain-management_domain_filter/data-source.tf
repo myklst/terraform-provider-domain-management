@@ -7,4 +7,5 @@ data "st-domain-management_domain_filter" "example" {
       "common/status" = "deleted"
     }
   }
+  jq_filter = ".dt = [.dt[0]]"
 }

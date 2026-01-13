@@ -22,6 +22,7 @@ data "st-domain-management_domain_filter" "example" {
       "common/status" = "deleted"
     }
   }
+  jq_filter = ".dt = [.dt[0]]"
 }
 ```
 
@@ -34,6 +35,9 @@ data "st-domain-management_domain_filter" "example" {
 Domains with annotations that match those in exclude will be ignored (see [below for nested schema](#nestedatt--domain_annotations))
 - `domain_labels` (Object) Domains that contain the labels in include will be returned as data source output.
 Domains with labels that match those in exclude will be ignored (see [below for nested schema](#nestedatt--domain_labels))
+- `jq_filter` (String) A string in the format of jq syntax.
+Can be used to perform more advanced filtration than the standard include/exclude.
+Beware, depending on your input, it may reshape the output such that it no longer matches the Domain Manangement schema.
 
 ### Read-Only
 
